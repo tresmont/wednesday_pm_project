@@ -1,0 +1,14 @@
+---
+title: "LiDAR Uncertainty Project"
+author: "Enrique Monta&ntilde;o"
+date: "June 22, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Objective
+
+Compare the simple residual canopy model (DSM - DTM) to a more robust pit-filled model
