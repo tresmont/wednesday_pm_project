@@ -1,6 +1,6 @@
 ---
 title: "LiDAR Uncertainty Project"
-author: "Enrique Monta&ntilde;o"
+author: "Dave McCaffrey and Enrique Monta&ntilde;o"
 date: "June 22, 2016"
 output: html_document
 ---
@@ -12,3 +12,98 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Objective
 
 Compare the simple residual canopy model (DSM - DTM) to a more robust pit-filled model
+
+```{r load-rasters}
+# load functions
+source("scripts/lidar_scripts.R")
+
+SJER_chmfile <- "../NEONdata/D17-California/SJER/2013/lidar/SJER_lidarCHM.tif"
+sjer_chm <- readCHM(SJER_chmfile)
+# plot(SJER_chm)
+
+SJER_dsmfile <- "../NEONdata/D17-California/SJER/2013/lidar/SJER_lidarDSM.tif"
+sjer_dsm <- readDSM(SJER_dsmfile)
+
+SJER_dtmfile <- "../NEONdata/D17-California/SJER/2013/lidar/SJER_lidarDTM.tif"
+sjer_dtm <- readDTM(SJER_dtmfile)
+
+sjer_slope <- raster("../NEONdata/D17-California/SJER/2013/lidar/SJER_lidarSlope.tif")
+
+sjer_aspect <- raster("../NEONdata/D17-California/SJER/2013/lidar/SJER_lidarAspect.tif")
+```
+
+### Calculate a residual canopy height model
+
+```{r calc-resid-chm}
+sjer_resid_chm <- calcResidCHM(sjer_dsm, sjer_dtm)
+plot(sjer_resid_chm,
+     main = "Residual CHM for SJER")
+```
+
+### Compare Model CHM to Residual CHM
+
+The difference is calculate as model CHM - residual CHM
+
+```{r compare-chm}
+
+sjer_diff_chm <- compareCHM(sjer_resid_chm, sjer_chm)
+plot(sjer_diff_chm,
+     main = "Difference between Residual and Model CHM")
+
+hist(sjer_diff_chm,
+     main = "Histogram of difference between CHM")
+```
+
+### Threshold the difference Greater than 5m
+
+```{r}
+
+sjer_threshold <- sjer_diff_chm
+sjer_threshold[sjer_diff_chm < 5] <- NA
+plot(sjer_threshold,
+     main = "Difference greater than 5m")
+
+mask <- sjer_threshold
+mask[mask > 5] <- 1
+
+# plot(mask, col="red")
+
+mask_slope <- sjer_slope * mask
+mask_aspect <- sjer_aspect * mask
+
+# plot(mask_aspect, col="blue")
+# make a data frame
+sjer_data_frame <- data.frame(chm_diff=as.vector(sjer_threshold),
+                              slope=as.vector(mask_slope),
+                              aspect=as.vector(mask_aspect))
+
+plot(sjer_data_frame$chm_diff[sjer_data_frame$chm_diff > 5], sjer_data_frame$slope[sjer_data_frame$chm_diff > 5],
+     main = "Relationship between Model Diff and Slope",
+     xlab = "Model Diff",
+     ylab = "Slope")
+
+plot(sjer_data_frame$chm_diff[sjer_data_frame$chm_diff > 5], sjer_data_frame$aspect[sjer_data_frame$chm_diff > 5],
+     main = "Relationship between Model Diff and Aspect",
+     xlab = "Model Diff",
+     ylab = "Aspect")
+
+
+# hist(sjer_data_frame$chm_diff)
+# import plot centroids
+sjer_plots <- readOGR("data/", "sjerPlots2")
+
+plot(sjer_diff_chm,
+     main="Plot Locations",
+     col=gray.colors(100, start=.3, end=.9))
+
+# pch 0 = square
+plot(sjer_plots,
+     pch = 0,
+     cex = 2,
+     col = 2,
+     add=TRUE)
+
+```
+
+
+
